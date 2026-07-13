@@ -8,6 +8,7 @@ pub enum Op {
     Mul,
     Div,
     MatMul,
+    View(String),
 }
 
 #[derive(Clone, PartialEq)]
@@ -109,13 +110,14 @@ impl IR {
             write!(out, "  n{} -> n{};\n", node.index, input.index).unwrap();
         }
 
-        let label = match self[node].op {
-            Op::Leaf(len) => format!("leaf<{}>", len),
+        let label = match &self[node].op {
+            Op::Leaf(len) => format!("leaf<{}>: {}", len, self[node].shape),
             Op::Add => format!("add"),
             Op::Sub => format!("sub"),
             Op::Mul => format!("mul"),
             Op::Div => format!("div"),
             Op::MatMul => format!("matmul"),
+            Op::View(label) => format!("{}", label)
         };
 
         write!(
@@ -190,6 +192,14 @@ impl Shape {
         self.0
     }
 
+    pub fn as_vec(&self) -> &Vec<usize> {
+        &self.0
+    }
+
+    pub fn as_vec_mut(&mut self) -> &mut Vec<usize> {
+        &mut self.0
+    }
+
     pub fn pointwise_ok(&self, other: &Shape) -> bool {
         self.0 == other.0
     }
@@ -231,5 +241,19 @@ impl std::ops::Index<usize> for Shape {
 impl std::ops::IndexMut<usize> for Shape {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
+    }
+}
+
+impl std::fmt::Display for Shape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        for (i, x) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", x)?;
+        }
+
+        write!(f, "]")
     }
 }

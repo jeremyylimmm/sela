@@ -69,6 +69,30 @@ impl<'a> Node<'a> {
         self.graph
             .create(Op::MatMul, vec![self.inner, rhs.inner], shape, strides)
     }
+
+    fn reversable_index(&self, idx: i32) -> usize {
+        if idx < 0 {
+            (self.dims() as i32 + idx) as usize
+        }
+        else {
+            idx as usize
+        }
+    }
+
+    pub fn transpose(&self, a: i32, b: i32) -> Node<'a> {
+        let a = self.reversable_index(a);
+        let b = self.reversable_index(b);
+
+        let mut shape = self.shape();
+        shape.as_vec_mut().swap(a, b);
+
+        let mut strides = self.graph.ir()[self.inner].strides.clone();
+        strides.swap(a, b);
+
+        let label = format!("transpose({}, {})", a, b);
+
+        self.graph.create(Op::View(label), vec![self.inner], shape, strides)
+    }
 }
 
 impl<'a> std::ops::Add<Node<'a>> for Node<'a> {
